@@ -1,0 +1,61 @@
+@page "/expense-tracker"
+@inject HttpClient Http
+@using Syncfusion.Blazor.DataForm
+
+<h3>Add Expense</h3>
+<EditForm FormName="ExpenceTracker" Model="@expense" OnValidSubmit="AddExpense">
+    <InputText @bind-Value="expense.Description" placeholder="Description" />
+    <InputNumber @bind-Value="expense.Amount" placeholder="Amount" />
+    <InputText @bind-Value="expense.Currency" placeholder="Currency" />
+    <button type="submit">Add Expense</button>
+</EditForm>
+
+@* <SfDataForm ID="ExpenceTraker" Model="@_expense"> *@
+@*     <FormItems> *@
+@*         <FormItem Field="@nameof(_expense.Description)" ID="Desc"></FormItem> *@
+@*         <FormItem Field="@nameof(_expense.Amount)" ID="Amount"></FormItem> *@
+@*         <FormItem Field="@nameof(_expense.Currency)" ID="Currency"></FormItem> *@
+@*     </FormItems> *@
+@* </SfDataForm> *@
+
+<h3>Expenses List</h3>
+<ul>
+    @foreach (var item in expenses)
+    {
+        <li>@item.Description - @item.Currency @item.Amount on @item.Date</li>
+    }
+</ul>
+
+@code {
+    private Expense expense = new Expense();
+    private List<Expense> expenses = new List<Expense>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadExpenses();
+    }
+
+    private async Task AddExpense()
+    {
+        Console.WriteLine(expense.Date);
+        var response = await Http.PostAsJsonAsync("http://localhost:5000/api/expense", expense);
+        if (response.IsSuccessStatusCode)
+        {
+            expense = new Expense();  // Reset the form
+            await LoadExpenses();
+        }
+    }
+
+    private async Task LoadExpenses()
+    {
+        expenses = await Http.GetFromJsonAsync<List<Expense>>("http://localhost:5000/api/expenses");
+    }
+
+    public class Expense
+    {
+        public string? Description { get; set; } = "";
+        public decimal Amount { get; set; }
+        public string? Currency { get; set; } = "";
+        public DateTime Date { get; set; }
+    }
+}

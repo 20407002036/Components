@@ -1,0 +1,179 @@
+@page "/second-expense-tracker"
+@inject HttpClient Http
+@using Syncfusion.Blazor.DataForm
+@using System.ComponentModel.DataAnnotations
+@using MudBlazor
+
+@* <h3>Add Expense</h3> *@
+@* <EditForm FormName="ExpenceTracker" Model="expense" OnValidSubmit="AddValues"> *@
+@*     <InputText @bind-Value="expense.Description" placeholder="Description" /> *@
+@*     <InputNumber @bind-Value="expense.Amount" placeholder="Amount" /> *@
+@*     <InputText @bind-Value="expense.Currency" placeholder="Currency" /> *@
+@*     <InputDate @bind-Value="expense.Date" /> <!-- Add date picker --> *@
+@*     <InputRadioGroup @bind-Value="IsIncome"> *@
+@*         <InputRadio Value="true">Income</InputRadio> *@
+@*         <InputRadio Value="false">Expenditure</InputRadio> *@
+@*     </InputRadioGroup> *@
+@*     <button type="submit">Add</button> *@
+@* </EditForm> *@
+
+<h3>Add Expense</h3>
+<MudForm Model="expense" OnValidSubmit="AddValues">
+    <MudTextField Label="Description" @bind-Value="expense.Description" Placeholder="Description" />
+    <MudNumericField Label="Amount" @bind-Value="expense.Amount" Placeholder="Amount" />
+    <MudTextField Label="Currency" @bind-Value="expense.Currency" Placeholder="Currency" />
+    <MudDatePicker Label="Date" @bind-Date="expense.Date" />
+
+    <MudRadioGroup T="bool" Label="Type" @bind-SelectedOption="IsIncome">
+        <MudRadio T="bool" Option="true">Income</MudRadio>
+        <MudRadio T="bool" Option="false">Expenditure</MudRadio>
+    </MudRadioGroup>
+
+    <MudButton Color="Color.Primary" Variant="Variant.Filled" Type="Submit">Add</MudButton>
+</MudForm>
+
+<h3>Expenses List</h3>
+<table class="table">
+    <thread>
+        <tr>
+            <th>Time, Date</th>
+            <th>Description</th>
+            <th>Amount</th>
+        </tr>
+    </thread>
+    <tbody>
+    @foreach (var item in expenses)
+    {
+        <tr>
+            <td>@item.Date</td>
+            <td>@item.Description</td>
+            <td>@item.Currency @item.Amount</td>
+        </tr>
+    }
+    </tbody>
+    
+</table>
+
+<h3>Incomes List</h3>
+<table class="table">
+    <thread>
+        <tr>
+            <th>Time, Date</th>
+            <th>Description</th>
+            <th>Amount</th>
+        </tr>
+    </thread>
+    <tbody>
+    @foreach (var item in incomes)
+    {
+    <tr>
+        <td>@item.Date</td>
+        <td>@item.Description</td>
+        <td>@item.Currency @item.Amount</td>
+    </tr>
+    }
+    </tbody>
+
+</table>
+
+<p> @expense.Description</p>
+
+@code {
+    public Expense expense = new Expense();
+    private List<Expense> expenses = new List<Expense>();
+    private Income income = new();
+    private List<Income> incomes = new List<Income>();
+    private bool IsIncome { get; set; }
+    private string Desc;
+    private string Currency;
+    private DateTime Date = DateTime.Today;
+    private decimal Amnt;
+    
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadExpenses();
+        await LoadIncomes();
+    }
+
+    private async Task AddValues()
+    {
+        try
+        {
+            if (IsIncome)
+            {
+                income.Description = Desc;
+                income.Amount = Amnt;
+                income.Date = Date;
+                income.Currency = Currency;
+                var response = await Http.PostAsJsonAsync("http://localhost:5000/api/income", income);
+                if (response.IsSuccessStatusCode)
+                {
+                    income = new Income();
+                    await LoadIncomes();
+                }
+                else
+                {
+                    Console.Error.WriteLine("Error saving expense: " + response.ReasonPhrase);
+                }
+            }
+            else
+            {
+                expense.Amount = Amnt;
+                expense.Currency = Currency;
+                expense.Description = Desc;
+                expense.Date = Date;
+                Console.WriteLine(expense.Date);
+                var response = await Http.PostAsJsonAsync("http://localhost:5000/api/expense", expense);
+                if (response.IsSuccessStatusCode)
+                {
+                    expense = new Expense();  // Reset the form
+                    await LoadExpenses();
+                }
+                else
+                {
+                    Console.Error.WriteLine("Error saving expense: " + response.ReasonPhrase);
+                }  
+            }
+            
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine("Error: " + ex.Message);
+        }
+    }
+
+    private async Task LoadExpenses()
+    {
+        expenses = await Http.GetFromJsonAsync<List<Expense>>("http://localhost:5000/api/expenses");
+    }
+
+    private async Task LoadIncomes()
+    {
+        incomes = await Http.GetFromJsonAsync<List<Income>>("http://localhost:5000/api/incomes");
+    }
+
+    public class Expense
+    {
+        // Optional fields, allow null if not provided
+        [Required(ErrorMessage = "Description is required.")]
+        public string? Description { get; set; }
+
+        [Required(ErrorMessage = "Amount is required.")]
+        [Range(0.01, double.MaxValue, ErrorMessage = "Amount must be greater than zero.")]
+        public decimal Amount { get; set; }
+
+        [Required(ErrorMessage = "Currency is required.")]
+        public string? Currency { get; set; }
+
+        public DateTime? Date { get; set; } = DateTime.Now; // Default to current date
+    }
+
+    public class Income
+    {
+        public string? Description { get; set; }
+        public decimal Amount { get; set; }
+        public string? Currency { get; set; }
+        public DateTime Date { get; set; } = DateTime.Now;
+    }
+}
